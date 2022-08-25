@@ -24,6 +24,17 @@ export default class Package implements IPackage {
       payload,
     });
 
+    console.log({
+      step: "message",
+      data: {
+        originIp,
+        originMac,
+        destinationMac: _destinationMac,
+        destinationIp,
+        payload,
+      },
+    });
+
     return message;
   }
 }

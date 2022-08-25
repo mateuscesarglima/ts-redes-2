@@ -12,6 +12,11 @@ export default class ArcTable implements IArcTable {
 
     if (!findData) this.data.push({ port, mac });
 
+    console.log({
+      status: "LOAD ARP TABLE",
+      data: this.data,
+    });
+
     return this.data;
   }
 }

@@ -8,7 +8,7 @@ const switchDevice = new Switch({
   qtdPorts: 4,
   connections: [],
   send: () => {},
-  arcTable: new ArcTable({ data: [], load: () => {} }),
+  table: new ArcTable({ data: [], load: () => {} }),
 });
 
 // const targets = Array.from({ length: switchDevice.qtdPorts });
@@ -26,11 +26,23 @@ const hosts = Array.from(
 
 print("INIT SYSTEM");
 
-console.log({ step: "set switch connections" });
+// console.log({ step: "set switch connections" });
 switchDevice.connections = hosts;
+// console.log({ step: "Switch", switch: switchDevice });
+// console.log({ step: "Hosts", hosts });
 
-console.log({ step: "host sending a message" });
-hosts[0].send(`${Constants.startIp}.3`, "oi");
-console.log("--------------------------------------");
+const message = {
+  originIp: hosts[0].ip,
+  originMac: hosts[0].mac,
+  payload: "OI",
+  destinationIp: `${Constants.startIp}.3`,
+};
+
+console.log({ step: "host will sending a message" });
+hosts[0].send(message);
+
+// hosts[1].setArcTable(3, hosts[3].mac);
+// hosts[1].send(`${Constants.startIp}.3`, "com mac na arp_table", hosts[3].mac);
+// console.log("--------------------------------------");
 // console.log({ step: "host sending a 2nd message" });
 // hosts[0].send(`${Constants.startIp}.3`, "tudo bem?");

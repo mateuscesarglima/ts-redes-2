@@ -9,12 +9,9 @@ export default interface IHost {
 
   arcTable?: IArcTable;
 
-  send?: (
-    destinationIp: string,
-    payload: string,
-    destinationMax?: string
-  ) => any;
+  send?: (params: IPackage) => any;
 
-  reply?: (params: IPackage) => string;
+  reply?: (params: IPackage) => any;
   setArcTable?: (port: number, mac: string) => any;
+  isMessageToMe?: (params: IPackage, port: number) => boolean;
 }

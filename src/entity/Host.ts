@@ -19,49 +19,64 @@ export default class Host implements IHost {
     this.connection = connection;
   }
 
-  send(destinationIp: string, payload: string, destinationMac?: string) {
-    print("SEND MESSAGE [HOST]");
-    console.log({
-      status: `send message with${destinationMac ? "" : "out"} destinationMac`,
-      component: "host",
-    });
+  send(params: IPackage) {
+    const { destinationMac, payload, destinationIp } = params;
+    print(`SEND MESSAGE [HOST: ${this.ip}] to [HOST: ${destinationIp}]`);
+
+    if (this.isReply(params.payload)) {
+      print("CONNECTION FINISHED");
+      return { message: "Connection finished" };
+    }
     if (!this.connection) {
       console.log({ error: "connection fail" });
       return { error: "connection fail" };
     }
+
     const message = new Package();
-    const data = {
+    const data: IPackage = {
       originIp: this.ip,
       originMac: this.mac,
       payload: destinationMac ? payload : Constants.arcRequestPayload,
       destinationIp,
-      destinationMac: destinationMac || Constants.withoutDestinationMac,
     };
+    const hasDestinationMac = this.arcTable?.data.find(
+      (el) => el.mac === destinationMac
+    );
+
+    data.destinationMac = hasDestinationMac
+      ? hasDestinationMac.mac
+      : Constants.withoutDestinationMac;
 
     const _package = message.generate(data);
     this.connection?.send(_package);
   }
 
-  reply(params: IPackage): string {
+  private isReply(payload: IPackage["payload"]) {
+    return payload && payload === Constants.arcReplyPayload;
+  }
+
+  reply(params: IPackage) {
     const data = {
       originIp: this.ip,
       originMac: this.mac,
-      payload: "REPLY",
+      payload: Constants.arcReplyPayload,
       destinationIp: params.originIp,
       destinationMac: params.originMac,
     };
-    console.log({ status: "reply", hostIp: this.ip, data });
-
-    return "";
+    this.send(data);
+    // console.log({ status: "REPLY [HOST]", hostIp: this.ip, data });
   }
 
   setArcTable(port: number, mac: string): any {
     this.arcTable?.load(port, mac);
-    console.log({
-      status: "set arc table",
-      component: "host",
-      host: this.ip,
-      arcTable: this.arcTable?.data,
-    });
+  }
+
+  isMessageToMe(params: IPackage, port: number): boolean {
+    this.setArcTable(port, params.originMac);
+    if (params.destinationIp === this.ip) {
+      this.reply(params);
+      return true;
+    }
+    return false;
   }
 }
