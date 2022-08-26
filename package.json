@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start:dev": "nodemon"
+    "dev": "nodemon"
   },
   "devDependencies": {
     "@types/node": "^18.7.11",
