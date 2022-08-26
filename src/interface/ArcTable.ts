@@ -1,5 +1,11 @@
-export default interface IArcTable {
-  data: { port: number; mac: string }[];
+export interface TableData {
+  port: number;
+  mac?: string;
+  ip?: string;
+}
 
-  load: (port: number, mac: string) => void;
+export default interface IArcTable {
+  data: TableData[];
+
+  load: (port: number, macOrIp: string, isSwitch?: boolean) => TableData[];
 }

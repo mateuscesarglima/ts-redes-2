@@ -11,6 +11,7 @@ export default class Host implements IHost {
   public mac: string = "";
   public arcTable!: IArcTable | undefined;
   public connection!: Switch | undefined;
+  private originalMessage!: Package;
 
   constructor({ ip, mac, arcTable, connection }: IHost) {
     this.ip = ip;
@@ -19,40 +20,72 @@ export default class Host implements IHost {
     this.connection = connection;
   }
 
-  send(params: IPackage) {
+  send(params: IPackage, isReply?: boolean) {
     const { destinationMac, payload, destinationIp } = params;
-    print(`SEND MESSAGE [HOST: ${this.ip}] to [HOST: ${destinationIp}]`);
 
-    if (this.isReply(params.payload)) {
-      print("CONNECTION FINISHED");
-      return { message: "Connection finished" };
-    }
     if (!this.connection) {
       console.log({ error: "connection fail" });
       return { error: "connection fail" };
     }
 
-    const message = new Package();
+    print(`SEND MESSAGE [HOST: ${this.ip}] to [HOST: ${destinationIp}]`);
+
     const data: IPackage = {
       originIp: this.ip,
       originMac: this.mac,
-      payload: destinationMac ? payload : Constants.arcRequestPayload,
+      payload,
       destinationIp,
     };
+    const message = new Package(data);
+    if (
+      [Constants.arcRequestPayload, Constants.arcReplyPayload].indexOf(
+        message.payload
+      )
+    )
+      this.originalMessage = message.payload;
+
+    console.log({
+      status: "STARTING SENDING",
+      message,
+    });
     const hasDestinationMac = this.arcTable?.data.find(
       (el) => el.mac === destinationMac
     );
 
-    data.destinationMac = hasDestinationMac
+    if (!hasDestinationMac) return this.preSend(message);
+
+    message.destinationMac = hasDestinationMac
       ? hasDestinationMac.mac
       : Constants.withoutDestinationMac;
 
-    const _package = message.generate(data);
-    this.connection?.send(_package);
+    console.log({
+      status: "SENDING NORMAL",
+    });
+
+    const _package = message.generate(message);
+    this.connection?.send(_package, isReply);
   }
 
-  private isReply(payload: IPackage["payload"]) {
-    return payload && payload === Constants.arcReplyPayload;
+  sendOriginal(params: IPackage) {
+    console.log({
+      status: "SEND ORIGINAL",
+      params,
+      originalMessage: this.originalMessage,
+    });
+    // this.send()
+  }
+
+  private preSend(params: Package) {
+    this.originalMessage = params;
+    const arpRequest = {
+      ...params,
+      payload: Constants.arcRequestPayload,
+    };
+    const _package = params.generate(arpRequest);
+    console.log({
+      status: "PRE SENDING",
+    });
+    this.connection?.send(_package);
   }
 
   reply(params: IPackage) {
@@ -63,8 +96,10 @@ export default class Host implements IHost {
       destinationIp: params.originIp,
       destinationMac: params.originMac,
     };
-    this.send(data);
-    // console.log({ status: "REPLY [HOST]", hostIp: this.ip, data });
+
+    print(`REPLY [HOST: ${this.ip}] -> [HOST: ${params.originIp}]`);
+
+    this.send(data, true);
   }
 
   setArcTable(port: number, mac: string): any {
@@ -72,8 +107,9 @@ export default class Host implements IHost {
   }
 
   isMessageToMe(params: IPackage, port: number): boolean {
-    this.setArcTable(port, params.originMac);
+    params.originIp !== this.ip && this.setArcTable(port, params.originMac);
     if (params.destinationIp === this.ip) {
+      console.log({ status: "IS_MESSAGE_TO_ME", ip: this.ip });
       this.reply(params);
       return true;
     }

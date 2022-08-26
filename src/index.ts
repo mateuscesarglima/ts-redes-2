@@ -8,10 +8,8 @@ const switchDevice = new Switch({
   qtdPorts: 4,
   connections: [],
   send: () => {},
-  table: new ArcTable({ data: [], load: () => {} }),
+  table: new ArcTable({ data: [], load: () => [] }),
 });
-
-// const targets = Array.from({ length: switchDevice.qtdPorts });
 
 const hosts = Array.from(
   { length: switchDevice.qtdPorts },
@@ -20,16 +18,13 @@ const hosts = Array.from(
       ip: `${Constants.startIp}.${idx + 1}`,
       mac: generateHex(16),
       connection: switchDevice,
-      arcTable: new ArcTable({ data: [], load: () => {} }),
+      arcTable: new ArcTable({ data: [], load: () => [] }),
     })
 );
 
 print("INIT SYSTEM");
 
-// console.log({ step: "set switch connections" });
 switchDevice.connections = hosts;
-// console.log({ step: "Switch", switch: switchDevice });
-// console.log({ step: "Hosts", hosts });
 
 const message = {
   originIp: hosts[0].ip,
@@ -38,11 +33,11 @@ const message = {
   destinationIp: `${Constants.startIp}.3`,
 };
 
-console.log({ step: "host will sending a message" });
 hosts[0].send(message);
 
-// hosts[1].setArcTable(3, hosts[3].mac);
-// hosts[1].send(`${Constants.startIp}.3`, "com mac na arp_table", hosts[3].mac);
-// console.log("--------------------------------------");
-// console.log({ step: "host sending a 2nd message" });
-// hosts[0].send(`${Constants.startIp}.3`, "tudo bem?");
+print("SHOW TABLES");
+hosts.forEach((host, idx) => {
+  console.log({ device: `HOST ${idx + 1}`, table: host.arcTable?.data });
+});
+console.log({ device: "SWITCH", table: switchDevice.table?.data });
+print("SYSTEM END");
