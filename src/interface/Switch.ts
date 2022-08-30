@@ -6,5 +6,5 @@ export default interface ISwitch {
   connections: IHost[];
   table?: IArcTable;
 
-  send: (params: string, isReply?: boolean) => any;
+  send: (params: string, isReply?: boolean, isDirectReply?: boolean) => any;
 }

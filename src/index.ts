@@ -37,7 +37,7 @@ hosts[0].send(message);
 
 print("SHOW TABLES");
 hosts.forEach((host, idx) => {
-  console.log({ device: `HOST ${idx + 1}`, table: host.arcTable?.data });
+  console.log({ device: `HOST ${idx + 1}`, table: host.table });
 });
 console.log({ device: "SWITCH", table: switchDevice.table?.data });
 print("SYSTEM END");

@@ -8,10 +8,11 @@ export default class ArcTable implements IArcTable {
   }
 
   load(port: number, macOrIp: string, isSwitch = false): TableData[] {
+    const key = isSwitch ? "ip" : "mac";
+
     const findData = this.data.find(
       (el) => el[isSwitch ? "mac" : "ip"] === macOrIp
     );
-    const key = isSwitch ? "ip" : "mac";
 
     if (!findData)
       this.data.push({

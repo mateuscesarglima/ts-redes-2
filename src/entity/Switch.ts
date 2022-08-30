@@ -16,11 +16,13 @@ export default class Switch implements ISwitch {
     this.table = table;
   }
 
-  send(params: string, isReply?: boolean) {
+  // receive
+  send(params: string, isReply?: boolean, isDirectReply?: boolean) {
     const decodedMessage: IPackage = decodeMessage(params);
     const hasDestinationMacArpTable = this.table?.data.find(
       (el) => el.ip === decodedMessage.destinationIp
-    );
+    ); // renomear
+
     if (!isReply) {
       if (
         decodedMessage.destinationMac !== Constants.withoutDestinationMac ||
@@ -31,23 +33,26 @@ export default class Switch implements ISwitch {
       }
     }
 
-    console.log({
-      status: "NÃO FAZ BROADCAST",
-      message: decodedMessage,
-      table: this.table?.data,
-    });
-
     const getPort = this.getHostPort(decodedMessage.originIp);
     if (getPort.error) return getPort.error;
 
     this.table?.load(getPort, decodedMessage.originIp, true);
-    this.connections.forEach((host, idx) => {
-      if (host.ip === decodedMessage.destinationIp)
-        host?.sendOriginal && host?.sendOriginal(decodedMessage);
-      decodedMessage.originIp !== host.ip &&
-        host?.setArcTable &&
-        host?.setArcTable(getPort, decodedMessage.originMac);
-    });
+
+    if (isReply)
+      this.connections.forEach((host, idx) => {
+        decodedMessage.originIp !== host.ip &&
+          host?.setArcTable &&
+          host?.setArcTable(getPort, decodedMessage.originMac);
+      });
+
+    const originalSender = this.connections.find(
+      (host) => host.ip === decodedMessage.destinationIp
+    );
+
+    !isDirectReply &&
+      originalSender &&
+      originalSender?.sendOriginal &&
+      originalSender?.sendOriginal(decodedMessage);
 
     return;
   }
