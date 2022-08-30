@@ -4,7 +4,7 @@ export interface TableData {
   ip?: string;
 }
 
-export default interface IArcTable {
+export default interface ITable {
   data: TableData[];
 
   load: (port: number, macOrIp: string, isSwitch?: boolean) => TableData[];

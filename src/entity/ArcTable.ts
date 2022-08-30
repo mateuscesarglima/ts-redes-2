@@ -1,4 +1,4 @@
-import IArcTable, { TableData } from "../interface/ArcTable";
+import IArcTable, { TableData } from "../interface/ArpTable";
 
 export default class ArcTable implements IArcTable {
   public data: TableData[];

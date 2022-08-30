@@ -1,4 +1,4 @@
-import IPackage from "../interface/Package";
+import IPacket from "../interface/Packet";
 
 export function generateHex(size: number): string {
   return Array.from({ length: size }, (x, idx) => {
@@ -12,7 +12,7 @@ export const encodeMessage = (payload: any): string => {
   let encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
   return encoded;
 };
-export const decodeMessage = (message: any): IPackage => {
+export const decodeMessage = (message: any): IPacket => {
   JSON.parse(
     Buffer.from(decodeURIComponent(message), "base64").toString("utf-8")
   );

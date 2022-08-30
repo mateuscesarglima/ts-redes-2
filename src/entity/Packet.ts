@@ -1,8 +1,8 @@
 import { Constants } from "../constants";
-import IPackage from "../interface/Package";
+import IPacket from "../interface/Packet";
 import { encodeMessage } from "../utils";
 
-export default class Package implements IPackage {
+export default class Packet implements IPacket {
   public originIp: string = "";
   public destinationIp: string = "";
   public originMac: string = "";
