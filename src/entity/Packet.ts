@@ -15,7 +15,7 @@ export default class Packet implements IPacket {
     payload,
     destinationIp,
     destinationMac,
-  }: IPackage) {
+  }: IPacket) {
     this.originIp = originIp;
     this.originMac = originMac;
     destinationMac && (this.destinationMac = destinationMac);
@@ -23,13 +23,21 @@ export default class Packet implements IPacket {
     this.payload = payload;
   }
 
-  generate(params: IPackage): string {
-    const { originIp, originMac, destinationMac, destinationIp, payload } =
-      params;
+  generate(params: IPacket): string {
+    const {
+      originIp,
+      originMac,
+      destinationMac,
+      destinationIp,
+      payload,
+      header,
+    } = params;
+
     const _destinationMac = destinationMac || Constants.withoutDestinationMac;
-    let _payload =
+
+    const _payload =
       _destinationMac === Constants.withoutDestinationMac
-        ? Constants.arcRequestPayload
+        ? Constants.arpRequestPayload
         : payload;
 
     const message = encodeMessage({
@@ -38,17 +46,11 @@ export default class Packet implements IPacket {
       destinationMac: _destinationMac,
       destinationIp,
       payload: _payload,
+      header,
     });
 
     console.log({
       step: "GENERATE MESSAGE",
-      data: {
-        originIp,
-        originMac,
-        destinationMac: _destinationMac,
-        destinationIp,
-        payload,
-      },
     });
 
     return message;

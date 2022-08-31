@@ -1,5 +1,6 @@
-import ITable from "./ArpTable";
+import ITable from "./Table";
 import ILink from "./Link";
+import INode from "./Node";
 import IPacket from "./Packet";
 
 export default interface IHost {
@@ -8,6 +9,12 @@ export default interface IHost {
   arpTable: ITable;
   link: ILink;
 
-  send: (payload: string, destinationIp: string) => void;
-  receive: (packet: IPacket) => void;
+  send: (
+    payload: string,
+    destinationIp: string,
+    destinationMac?: string
+  ) => void;
+  receive: (packet: string) => void;
+
+  addLink: (connection: INode["connection"]) => void;
 }
