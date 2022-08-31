@@ -1,6 +1,7 @@
 import IPacket from "../interface/Packet";
 
-export function generateHex(size: number): string {
+export function generateHex(): string {
+  const size = 16;
   return Array.from({ length: size }, (x, idx) => {
     const char = Math.floor(Math.random() * 16).toString(16);
 
