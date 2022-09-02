@@ -1,55 +1,62 @@
 import ITable from "../interface/Table";
-import ILink from "../interface/Link";
-import INode from "../interface/Node";
-import Packet, { PacketHeaderEnum } from "../interface/Packet";
 import ISwitch from "../interface/Switch";
-import { decodeMessage } from "../utils";
-import Link from "./Link";
-import IPacket from "../interface/Packet";
-import { Constants } from "../constants";
+import { decodeMessage, encodeMessage } from "../utils";
+import IPacket, { PacketHeaderEnum } from "../interface/Packet";
 import Table from "./ArpTable";
+import IPort from "../interface/Port";
+import Port from "./Port";
+import { Constants } from "../constants";
 
 export default class Switch implements ISwitch {
-  forwardingTable: ITable;
-  ports: { [key: string]: number };
-  link: ILink[];
+  public forwardingTable: ITable;
+  public ports: IPort[];
+  public qtdPorts: number;
 
-  constructor() {
+  constructor(qtdPports?: number) {
     this.forwardingTable = new Table();
-    this.ports = {};
-    this.link = [];
-  }
-
-  receive(packet: string) {
-    console.log({ method: "RECEIVE [SWITCH]" });
-    const decPacket = decodeMessage(packet);
-
-    if (
-      decPacket.header === PacketHeaderEnum.ArpRequest ||
-      decPacket.header === PacketHeaderEnum.ArpReply ||
-      decPacket?.destinationMac === Constants.withoutDestinationMac ||
-      !this.findDataForwardingTable(decPacket?.destinationMac)
-    ) {
-      this.broadcast(decPacket);
-    }
-  }
-
-  send!: (packet: Packet) => void;
-
-  addLink(connection: INode["connection"], port: number) {
-    this.link.push(new Link(this, connection));
-  }
-
-  private findDataForwardingTable(destinationMac?: string) {
-    return (
-      destinationMac &&
-      this.forwardingTable.data.findIndex((el) => el.mac === destinationMac) !==
-        -1
+    this.qtdPorts = qtdPports || 4;
+    this.ports = Array.from(
+      { length: this.qtdPorts },
+      (x, y) => new Port(y + 1, this)
     );
   }
 
+  receive(packet: IPacket) {
+    console.log({ method: "RECEIVE [SWITCH]", packet });
+    this.processing(packet);
+
+    if (
+      packet.header === PacketHeaderEnum.ArpRequest ||
+      packet.header === PacketHeaderEnum.ArpReply ||
+      packet?.destinationMac === Constants.withoutDestinationMac
+    ) {
+      this.broadcast(packet);
+    }
+  }
+
+  send!: (packet: IPacket) => void;
+
+  addLink(connection: IPort, port: number) {
+    console.log({ method: "ADD LINK", connection });
+    this.ports[port - 1].add(this.ports[port - 1], connection);
+  }
+
   private broadcast(packet: IPacket) {
-    console.log({ method: "BROADCAST", packet });
-    // this.forwardingTable.load();
+    console.log({ method: "BROADCAST" });
+    this.ports.forEach((port) => port.send(packet));
+  }
+
+  private processing(packet: IPacket) {
+    console.log({ method: "PROCESSING" });
+    this.ports.forEach((port) => {
+      const portWithPacket = port.queueReceive.find((el) => el === packet);
+      if (portWithPacket) {
+        this.forwardingTable.load({
+          mac: portWithPacket.originIp,
+          port: port.num,
+          isSwitch: true,
+        });
+      }
+    });
   }
 }

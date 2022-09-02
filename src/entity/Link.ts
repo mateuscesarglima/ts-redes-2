@@ -1,17 +1,17 @@
 import ILink from "../interface/Link";
-import INode from "../interface/Node";
-import Packet from "../interface/Packet";
+import IPacket from "../interface/Packet";
+import IPort from "../interface/Port";
 
 export default class Link implements ILink {
-  port1!: INode["connection"];
-  port2!: INode["connection"];
+  port1!: IPort;
+  port2!: IPort;
 
-  constructor(port1?: INode["connection"], port2?: INode["connection"]) {
-    this.port1 = port1;
-    this.port2 = port2;
+  constructor(port1?: IPort, port2?: IPort) {
+    port1 && (this.port1 = port1);
+    port2 && (this.port2 = port2);
   }
 
-  send(device: INode["connection"], packet: string) {
+  send(device: IPort, packet: IPacket) {
     if (device === this.port1) {
       this.port2?.receive(packet);
     } else {
@@ -19,7 +19,7 @@ export default class Link implements ILink {
     }
   }
 
-  add(port1: INode["connection"], port2: INode["connection"]) {
+  add(port1: IPort, port2: IPort) {
     this.port1 = port1;
     this.port2 = port2;
   }

@@ -1,4 +1,4 @@
-import ITable, { TableData } from "../interface/Table";
+import ITable, { LoadTableProps, TableData } from "../interface/Table";
 
 export default class ArpTable implements ITable {
   public data: TableData[];
@@ -7,17 +7,31 @@ export default class ArpTable implements ITable {
     this.data = [];
   }
 
-  load(port: number, macOrIp: string, isSwitch = false): TableData[] {
-    const key = isSwitch ? "ip" : "mac";
+  load({ mac, ip, isSwitch, port }: LoadTableProps): TableData[] {
+    return isSwitch ? this.loadIfSwitch(port, mac) : this.loadArpTable(ip, mac);
+  }
 
-    const findData = this.data.find(
-      (el) => el[isSwitch ? "mac" : "ip"] === macOrIp
-    );
+  private loadIfSwitch(port?: number, mac?: string) {
+    if (!port && !mac) return [];
+    const findData = this.data.find((el) => el.mac === mac);
 
     if (!findData)
       this.data.push({
         port,
-        [key]: macOrIp,
+        mac,
+      });
+
+    return this.data;
+  }
+
+  private loadArpTable(ip?: string, mac?: string) {
+    if (!ip && !mac) return [];
+    const findData = this.data.find((el) => el.ip === ip);
+
+    if (!findData)
+      this.data.push({
+        ip,
+        mac,
       });
 
     return this.data;

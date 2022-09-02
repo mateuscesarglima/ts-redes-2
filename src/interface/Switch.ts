@@ -2,14 +2,15 @@ import ITable from "./Table";
 import ILink from "./Link";
 import INode from "./Node";
 import IPacket from "./Packet";
+import IPort from "./Port";
 
 export default interface ISwitch {
   forwardingTable: ITable;
-  ports: { [key: string]: number };
-  link: ILink[];
+  ports: IPort[];
+  qtdPorts: number;
 
-  receive: (packet: string) => void;
+  receive: (packet: IPacket) => void;
   send: (packet: IPacket) => void;
 
-  addLink: (connection: INode["connection"], port: number) => void;
+  addLink: (connection: IPort, port: number) => void;
 }

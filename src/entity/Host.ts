@@ -1,61 +1,70 @@
 import { Constants } from "../constants";
 import IArpTable from "../interface/Table";
 import IHost from "../interface/Host";
-import ILink from "../interface/Link";
-import INode from "../interface/Node";
 import IPacket, { PacketHeaderEnum } from "../interface/Packet";
-import { generateHex, print } from "../utils";
+import { Colors, decodeMessage, generateHex, print } from "../utils";
 import ArpTable from "./ArpTable";
-import Link from "./Link";
 import Packet from "./Packet";
+import IPort from "../interface/Port";
+import Port from "./Port";
 
 export default class Host implements IHost {
   public ip: string;
   public mac: string;
   public arpTable: IArpTable;
-  public link: ILink;
+  public port: IPort;
 
   constructor(ip: string) {
     this.ip = ip;
     this.mac = generateHex();
     this.arpTable = new ArpTable();
-    this.link = new Link();
+    this.port = new Port(1, this);
   }
 
   send(payload: string, destinationIp: string, destinationMac?: string) {
-    print(`SEND MESSAGE [HOST: ${this.ip}] to [HOST: ${destinationIp}]`);
-    if (!this.link) {
-      return console.log({ error: "Must be connected" });
-    }
-
-    const hasDestinationMac = this.arpTable.data.find(
-      (el) => el.ip === destinationIp
-    );
+    print(`SEND MESSAGE [HOST: ${this.ip}] TO [HOST: ${destinationIp}]`);
 
     if (!destinationMac) {
-      this.arpRequest();
+      this.arpRequest(destinationIp, payload);
     }
   }
 
-  receive(packet: string) {
-    console.log({ method: "RECEIVE [HOST]" });
+  receive(packet: IPacket) {
+    console.log(
+      Colors.FgBlue,
+      { method: `RECEIVE [HOST: ${this.ip}]` },
+      Colors.Reset
+    );
+
+    if (this.ip !== packet.originIp)
+      this.arpTable.load({ ip: packet.originIp, mac: packet.originMac });
+
+    if (packet.destinationIp === this.ip) {
+      console.log(
+        Colors.FgMagenta,
+        { status: "IS MESSAGE TO ME" },
+        Colors.Reset
+      );
+    } else {
+    }
   }
 
-  addLink(connection: INode["connection"]) {
-    this.link = new Link(this, connection);
+  addLink(connection: IPort) {
+    this.port.add(this.port, connection);
   }
 
-  private arpRequest() {
+  private arpRequest(destinationIp: string, payload: any) {
     print("ARP REQUEST");
     const message = {
       originIp: this.ip,
       originMac: this.mac,
-      payload: Constants.arpRequestPayload,
+      payload,
       header: PacketHeaderEnum.ArpRequest,
+      destinationIp,
     } as IPacket;
 
     const packet = new Packet(message);
 
-    this.link.send(this, packet.generate(message));
+    this.port.send(packet);
   }
 }

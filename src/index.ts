@@ -11,18 +11,17 @@ const h2 = new Host(`${Constants.startIp}.2`);
 const h3 = new Host(`${Constants.startIp}.3`);
 
 //
-switchDevice.addLink(h1, 1);
-switchDevice.addLink(h2, 2);
-switchDevice.addLink(h3, 3);
+switchDevice.addLink(h1.port, 1);
+switchDevice.addLink(h2.port, 4);
+switchDevice.addLink(h3.port, 3);
 
-console.log({ target: "SWITCH", hostLink: switchDevice.link });
+console.log({ target: "SWITCH", switchDevice, ports: switchDevice.ports });
 //
 
-h1.addLink(switchDevice);
-h2.addLink(switchDevice);
-h3.addLink(switchDevice);
+h1.addLink(switchDevice.ports[0]);
+h2.addLink(switchDevice.ports[3]);
+h3.addLink(switchDevice.ports[2]);
 
-console.log({ target: "HOST", hostLink: h1.link });
 //
 
 h1.send("OI", `${Constants.startIp}.3`);

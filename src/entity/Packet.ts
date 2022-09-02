@@ -1,5 +1,5 @@
 import { Constants } from "../constants";
-import IPacket from "../interface/Packet";
+import IPacket, { PacketHeaderEnum } from "../interface/Packet";
 import { encodeMessage } from "../utils";
 
 export default class Packet implements IPacket {
@@ -8,6 +8,7 @@ export default class Packet implements IPacket {
   public originMac: string = "";
   public destinationMac?: string = Constants.withoutDestinationMac;
   public payload: any;
+  public header?: PacketHeaderEnum;
 
   constructor({
     originIp,
@@ -15,12 +16,14 @@ export default class Packet implements IPacket {
     payload,
     destinationIp,
     destinationMac,
+    header,
   }: IPacket) {
     this.originIp = originIp;
     this.originMac = originMac;
     destinationMac && (this.destinationMac = destinationMac);
     this.destinationIp = destinationIp;
     this.payload = payload;
+    this.header = header;
   }
 
   generate(params: IPacket): string {

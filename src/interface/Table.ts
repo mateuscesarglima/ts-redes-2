@@ -1,11 +1,15 @@
 export interface TableData {
-  port: number;
+  port?: number;
   mac?: string;
   ip?: string;
+}
+
+export interface LoadTableProps extends TableData {
+  isSwitch?: boolean;
 }
 
 export default interface ITable {
   data: TableData[];
 
-  load: (port: number, macOrIp: string, isSwitch?: boolean) => TableData[];
+  load: ({ mac, ip, isSwitch }: LoadTableProps) => TableData[];
 }
