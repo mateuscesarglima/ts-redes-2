@@ -1,10 +1,16 @@
-import IArcTable from "./ArcTable";
-import IHost from "./Host";
+import ITable from "./Table";
+import ILink from "./Link";
+import INode from "./Node";
+import IPacket from "./Packet";
+import IPort from "./Port";
 
 export default interface ISwitch {
+  forwardingTable: ITable;
+  ports: IPort[];
   qtdPorts: number;
-  connections: IHost[];
-  table?: IArcTable;
 
-  send: (params: string, isReply?: boolean, isDirectReply?: boolean) => any;
+  receive: (packet: IPacket) => void;
+  send: (packet: IPacket) => void;
+
+  addLink: (connection: IPort, port: number) => void;
 }

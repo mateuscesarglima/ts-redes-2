@@ -1,43 +1,37 @@
-import { Constants } from "./constants";
-import ArcTable from "./entity/ArcTable";
-import Host from "./entity/Host";
 import Switch from "./entity/Switch";
-import { generateHex, print } from "./utils";
-
-const switchDevice = new Switch({
-  qtdPorts: 4,
-  connections: [],
-  send: () => {},
-  table: new ArcTable({ data: [], load: () => [] }),
-});
-
-const hosts = Array.from(
-  { length: switchDevice.qtdPorts },
-  (x, idx) =>
-    new Host({
-      ip: `${Constants.startIp}.${idx + 1}`,
-      mac: generateHex(16),
-      connection: switchDevice,
-      arcTable: new ArcTable({ data: [], load: () => [] }),
-    })
-);
+import Host from "./entity/Host";
+import { print } from "./utils";
+import { Constants } from "./constants";
+import IPacket from "./interface/Packet";
 
 print("INIT SYSTEM");
+const switchDevice = new Switch();
 
-switchDevice.connections = hosts;
+const h1 = new Host(`${Constants.startIp}.1`);
+const h2 = new Host(`${Constants.startIp}.2`);
+const h3 = new Host(`${Constants.startIp}.3`);
 
-const message = {
-  originIp: hosts[0].ip,
-  originMac: hosts[0].mac,
+//
+switchDevice.addLink(h1.port, 1);
+switchDevice.addLink(h2.port, 4);
+switchDevice.addLink(h3.port, 3);
+
+// console.log({ target: "SWITCH", switchDevice, ports: switchDevice.ports });
+//
+
+h1.addLink(switchDevice.ports[0]);
+h2.addLink(switchDevice.ports[3]);
+h3.addLink(switchDevice.ports[2]);
+
+//
+const packet = {
   payload: "OI",
   destinationIp: `${Constants.startIp}.3`,
-};
+} as IPacket;
+h1.send(packet);
 
-hosts[0].send(message);
-
-print("SHOW TABLES");
-hosts.forEach((host, idx) => {
-  console.log({ device: `HOST ${idx + 1}`, table: host.table });
-});
-console.log({ device: "SWITCH", table: switchDevice.table?.data });
-print("SYSTEM END");
+print("TABLES");
+console.log({ target: "SWITCH", table: switchDevice.forwardingTable.data });
+console.log({ target: "H1", table: h1.arpTable.data });
+console.log({ target: "H2", table: h2.arpTable.data });
+console.log({ target: "H3", table: h3.arpTable.data });

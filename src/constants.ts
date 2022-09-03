@@ -1,6 +1,6 @@
 export enum Constants {
   startIp = "192.168.15",
   withoutDestinationMac = "ff.ff.ff.ff.ff.ff.ff",
-  arcRequestPayload = "ARC_REQUEST_PAYLOAD",
-  arcReplyPayload = "ARP_REPLY",
+  arpRequestPayload = "ARP_REQUEST_PAYLOAD",
+  arpReplyPayload = "ARP_REPLY",
 }

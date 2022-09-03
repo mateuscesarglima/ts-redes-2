@@ -1,13 +1,14 @@
 import { Constants } from "../constants";
-import IPackage from "../interface/Package";
+import IPacket, { PacketHeaderEnum } from "../interface/Packet";
 import { encodeMessage } from "../utils";
 
-export default class Package implements IPackage {
+export default class Packet implements IPacket {
   public originIp: string = "";
   public destinationIp: string = "";
   public originMac: string = "";
   public destinationMac?: string = Constants.withoutDestinationMac;
   public payload: any;
+  public header?: PacketHeaderEnum;
 
   constructor({
     originIp,
@@ -15,21 +16,31 @@ export default class Package implements IPackage {
     payload,
     destinationIp,
     destinationMac,
-  }: IPackage) {
+    header,
+  }: IPacket) {
     this.originIp = originIp;
     this.originMac = originMac;
     destinationMac && (this.destinationMac = destinationMac);
     this.destinationIp = destinationIp;
     this.payload = payload;
+    this.header = header;
   }
 
-  generate(params: IPackage): string {
-    const { originIp, originMac, destinationMac, destinationIp, payload } =
-      params;
+  generate(params: IPacket): string {
+    const {
+      originIp,
+      originMac,
+      destinationMac,
+      destinationIp,
+      payload,
+      header,
+    } = params;
+
     const _destinationMac = destinationMac || Constants.withoutDestinationMac;
-    let _payload =
+
+    const _payload =
       _destinationMac === Constants.withoutDestinationMac
-        ? Constants.arcRequestPayload
+        ? Constants.arpRequestPayload
         : payload;
 
     const message = encodeMessage({
@@ -38,17 +49,11 @@ export default class Package implements IPackage {
       destinationMac: _destinationMac,
       destinationIp,
       payload: _payload,
+      header,
     });
 
     console.log({
       step: "GENERATE MESSAGE",
-      data: {
-        originIp,
-        originMac,
-        destinationMac: _destinationMac,
-        destinationIp,
-        payload,
-      },
     });
 
     return message;

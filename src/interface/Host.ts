@@ -1,18 +1,15 @@
-import IArcTable from "./ArcTable";
-import IPackage from "./Package";
-import ISwitch from "./Switch";
+import ITable from "./Table";
+import IPort from "./Port";
+import IPacket from "./Packet";
 
 export default interface IHost {
   ip: string;
   mac: string;
-  connection?: ISwitch;
+  arpTable: ITable;
+  port: IPort;
 
-  arcTable?: IArcTable;
+  send: (packet: IPacket) => void;
+  receive: (packet: IPacket) => void;
 
-  send?: (params: IPackage, isReply?: boolean, isDirectReply?: boolean) => any;
-  sendOriginal?: (params: IPackage) => any;
-
-  reply?: (params: IPackage, isArpReply?: boolean) => any;
-  setArcTable?: (port: number, mac: string) => any;
-  isMessageToMe?: (params: IPackage, port: number) => boolean;
+  addLink: (connection: IPort) => void;
 }

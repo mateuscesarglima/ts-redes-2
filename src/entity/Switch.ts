@@ -1,81 +1,74 @@
-import { Constants } from "../constants";
-import IArcTable from "../interface/ArcTable";
-import IHost from "../interface/Host";
-import IPackage from "../interface/Package";
+import ITable from "../interface/Table";
 import ISwitch from "../interface/Switch";
-import { decodeMessage, print } from "../utils";
+import { decodeMessage, encodeMessage } from "../utils";
+import IPacket, { PacketHeaderEnum } from "../interface/Packet";
+import Table from "./ArpTable";
+import IPort from "../interface/Port";
+import Port from "./Port";
+import { Constants } from "../constants";
 
 export default class Switch implements ISwitch {
-  public table!: IArcTable | undefined;
-  public qtdPorts: number = 1;
-  public connections: IHost[] = [];
+  public forwardingTable: ITable;
+  public ports: IPort[];
+  public qtdPorts: number;
 
-  constructor({ qtdPorts, connections, table }: ISwitch) {
-    this.qtdPorts = qtdPorts;
-    this.connections = connections;
-    this.table = table;
-  }
-
-  // receive
-  send(params: string, isReply?: boolean, isDirectReply?: boolean) {
-    const decodedMessage: IPackage = decodeMessage(params);
-    const hasDestinationMacArpTable = this.table?.data.find(
-      (el) => el.ip === decodedMessage.destinationIp
-    ); // renomear
-
-    if (!isReply) {
-      if (
-        decodedMessage.destinationMac !== Constants.withoutDestinationMac ||
-        !hasDestinationMacArpTable
-      ) {
-        console.log({ status: "BROADCAST", payload: decodedMessage.payload });
-        return this.broadcast(decodedMessage);
-      }
-    }
-
-    const getPort = this.getHostPort(decodedMessage.originIp);
-    if (getPort.error) return getPort.error;
-
-    this.table?.load(getPort, decodedMessage.originIp, true);
-
-    if (isReply)
-      this.connections.forEach((host, idx) => {
-        decodedMessage.originIp !== host.ip &&
-          host?.setArcTable &&
-          host?.setArcTable(getPort, decodedMessage.originMac);
-      });
-
-    const originalSender = this.connections.find(
-      (host) => host.ip === decodedMessage.destinationIp
+  constructor(qtdPports?: number) {
+    this.forwardingTable = new Table();
+    this.qtdPorts = qtdPports || 4;
+    this.ports = Array.from(
+      { length: this.qtdPorts },
+      (x, y) => new Port(y + 1, this)
     );
-
-    !isDirectReply &&
-      originalSender &&
-      originalSender?.sendOriginal &&
-      originalSender?.sendOriginal(decodedMessage);
-
-    return;
   }
 
-  private getHostPort(ip: string): any {
-    const getPort = this.connections.findIndex((el) => el.ip === ip);
-    if (getPort === -1) {
-      console.log({ error: "PORT NOT FOUND" });
-      return { error: "PORT NOT FOUND" };
+  receive(packet: IPacket) {
+    console.log({ method: "RECEIVE [SWITCH]" });
+    this.processing(packet);
+
+    if (
+      packet.header === PacketHeaderEnum.ArpRequest ||
+      packet.header === PacketHeaderEnum.ArpReply ||
+      packet?.destinationMac === Constants.withoutDestinationMac
+    ) {
+      this.broadcast(packet);
+    } else {
+      console.log({ status: "DOESN`T DO BROADCAST" });
+      this.send(packet);
     }
-    return getPort + 1;
   }
 
-  private broadcast(message: IPackage) {
-    print("BROADCAST [SWITCH]");
-    const getPort = this.getHostPort(message.originIp);
+  send(packet: IPacket) {
+    const findCorrectPort = this.forwardingTable.data.find(
+      (el) => el.mac === packet.destinationMac
+    );
+    console.log({ method: "SEND [SWITCH]" });
 
-    if (getPort.error) return getPort.error;
+    if (findCorrectPort && findCorrectPort?.port) {
+      this.ports[findCorrectPort?.port - 1].send(packet);
+    }
+  }
 
-    this.table?.load(getPort, message.originIp, true);
-    console.log({ status: "BROADCAST", table: this.table?.data });
-    this.connections.forEach((host, idx) => {
-      host?.isMessageToMe && host?.isMessageToMe(message, getPort);
+  addLink(connection: IPort, port: number) {
+    // console.log({ method: "ADD LINK", connection });
+    this.ports[port - 1].add(this.ports[port - 1], connection);
+  }
+
+  private broadcast(packet: IPacket) {
+    console.log({ method: "BROADCAST" });
+    this.ports.forEach((port) => port.send(packet));
+  }
+
+  private processing(packet: IPacket) {
+    console.log({ method: "PROCESSING" });
+    this.ports.forEach((port) => {
+      const portWithPacket = port.queueReceive.find((el) => el === packet);
+      if (portWithPacket) {
+        this.forwardingTable.load({
+          mac: portWithPacket.originMac,
+          port: port.num,
+          isSwitch: true,
+        });
+      }
     });
   }
 }

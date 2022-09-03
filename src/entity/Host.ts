@@ -1,137 +1,95 @@
 import { Constants } from "../constants";
-import IArcTable from "../interface/ArcTable";
+import IArpTable from "../interface/Table";
 import IHost from "../interface/Host";
-import IPackage from "../interface/Package";
-import Switch from "../interface/Switch";
-import { print } from "../utils";
-import Package from "./Package";
+import IPacket, { PacketHeaderEnum } from "../interface/Packet";
+import { Colors, decodeMessage, generateHex, print } from "../utils";
+import ArpTable from "./ArpTable";
+import Packet from "./Packet";
+import IPort from "../interface/Port";
+import Port from "./Port";
 
 export default class Host implements IHost {
-  public ip: string = "";
-  public mac: string = "";
-  public arcTable!: IArcTable | undefined;
-  public connection!: Switch | undefined;
-  private originalMessage!: Package;
+  public ip: string;
+  public mac: string;
+  public arpTable: IArpTable;
+  public port: IPort;
 
-  constructor({ ip, mac, arcTable, connection }: IHost) {
+  constructor(ip: string) {
     this.ip = ip;
-    this.mac = mac;
-    this.arcTable = arcTable;
-    this.connection = connection;
+    this.mac = generateHex();
+    this.arpTable = new ArpTable();
+    this.port = new Port(1, this);
   }
 
-  send(params: IPackage, isReply?: boolean, isDirectReply?: boolean) {
-    const { destinationMac, payload, destinationIp } = params;
+  send(packet: IPacket) {
+    print(`SEND MESSAGE [HOST: ${this.ip}] TO [HOST: ${packet.destinationIp}]`);
 
-    if (!this.connection) {
-      console.log({ error: "connection fail" });
-      return { error: "connection fail" };
+    if (!packet.destinationMac) {
+      return this.arpRequest(packet.destinationIp, packet.payload);
     }
 
-    print(`SEND MESSAGE [HOST: ${this.ip}] to [HOST: ${destinationIp}]`);
+    const _packet = new Packet(packet);
 
-    const data: IPackage = {
+    if (packet?.header === PacketHeaderEnum.ArpReply) {
+      console.log({ method: "HOST ARP REPLY" });
+    }
+    console.log({ method: "HOST SEND WITH DESTINATION MAC" });
+    return this.port.send(_packet);
+  }
+
+  receive(packet: IPacket) {
+    console.log(
+      Colors.FgBlue,
+      { method: `RECEIVE [HOST: ${this.ip}]` },
+      Colors.Reset
+    );
+
+    if (this.ip !== packet.originIp)
+      this.arpTable.load({ ip: packet.originIp, mac: packet.originMac });
+
+    if (packet.destinationIp === this.ip) {
+      if (!packet.header) return console.log({ status: "MESSAGE RECEIVED" });
+      console.log(
+        Colors.FgMagenta,
+        { status: "IS MESSAGE TO ME" },
+        Colors.Reset
+      );
+      const _packet: IPacket = {
+        originIp: this.ip,
+        originMac: this.mac,
+        destinationIp: packet.originIp,
+        destinationMac: packet.originMac,
+        payload: packet.payload,
+      };
+      if (packet?.header === PacketHeaderEnum.ArpRequest) {
+        const arpReplyPacket: IPacket = {
+          ..._packet,
+          header: PacketHeaderEnum.ArpReply,
+        };
+
+        this.send(new Packet(arpReplyPacket));
+      } else {
+        this.send(new Packet(_packet));
+      }
+    }
+  }
+
+  addLink(connection: IPort) {
+    this.port.add(this.port, connection);
+  }
+
+  private arpRequest(destinationIp: string, payload: any) {
+    print("ARP REQUEST");
+    const message = {
       originIp: this.ip,
       originMac: this.mac,
       payload,
+      header: PacketHeaderEnum.ArpRequest,
       destinationIp,
-    };
-    const message = new Package(data); // mudar prop
-    if (
-      [Constants.arcRequestPayload, Constants.arcReplyPayload].indexOf(
-        message.payload
-      ) !== -1
-    ) {
-      // criar um enum de cabeçalho do tipo de mensagem
+    } as IPacket;
 
-      // salvar quando não tiver o mac destino
-      this.originalMessage = message.payload;
-    }
+    const packet = new Packet(message);
 
-    console.log({
-      status: "STARTING SENDING",
-      message,
-    });
-
-    const hasDestinationMac = this.arcTable?.data.find(
-      (el) => el.mac === destinationMac
-    );
-
-    if (!hasDestinationMac) return this.preSend(message); // mudar para arp request
-
-    message.destinationMac = hasDestinationMac
-      ? hasDestinationMac.mac
-      : Constants.withoutDestinationMac;
-
-    console.log({
-      status: "SENDING NORMAL",
-    });
-
-    const _package = message.generate(message);
-    this.connection?.send(_package, isReply, isDirectReply);
-  }
-
-  sendOriginal(params: IPackage) {
-    const data: IPackage = {
-      originIp: this.ip,
-      originMac: this.mac,
-      payload: this.originalMessage.payload,
-      destinationIp: params.originIp,
-      destinationMac: params.originMac,
-    };
-    const message = new Package(data);
-    print("ORIGINAL SEND");
-
-    this.send(message, true, true);
-  }
-
-  private preSend(params: Package) {
-    this.originalMessage = params;
-    const arpRequest = {
-      ...params,
-      payload: Constants.arcRequestPayload,
-    };
-    const _package = params.generate(arpRequest);
-    console.log({
-      status: "PRE SENDING",
-    });
-    this.connection?.send(_package);
-  }
-
-  reply(params: IPackage, isArpReply?: boolean) {
-    const data = {
-      originIp: this.ip,
-      originMac: this.mac,
-      payload: Constants.arcReplyPayload,
-      destinationIp: params.originIp,
-      destinationMac: params.originMac,
-    };
-
-    print(
-      `[${isArpReply ? "ARP" : ""}] REPLY [HOST: ${this.ip}] -> [HOST: ${
-        params.originIp
-      }]`
-    );
-
-    this.send(data, isArpReply);
-  }
-
-  setArcTable(port: number, mac: string): any {
-    this.arcTable?.load(port, mac);
-  }
-
-  isMessageToMe(params: IPackage, port: number): boolean {
-    params.originIp !== this.ip && this.setArcTable(port, params.originMac);
-
-    if (params.destinationIp === this.ip) {
-      console.log({ status: "IS_MESSAGE_TO_ME", ip: this.ip });
-      this.reply(params, true);
-      return true;
-    }
-    return false;
-  }
-
-  public get table() {
-    return this.arcTable?.data;
+    this.port.send(packet);
   }
 }
