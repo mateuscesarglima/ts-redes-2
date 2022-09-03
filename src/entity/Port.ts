@@ -24,15 +24,13 @@ export default class Port implements IPort {
   }
 
   receive(packet: IPacket) {
-    console.log("\n =>", { method: "PORT RECEIVE" }, "\n");
+    // const findPacket = this.queueReceive.find((pkt) => pkt === packet);
     this.queueReceive.push(packet);
     this.connection.receive(packet);
   }
 
   send(packet: IPacket) {
-    console.log("\n =>", { method: "PORT SEND" }, "\n");
     this.queueSend.push(packet);
-
     this.link?.send(this, packet);
   }
 
