@@ -22,7 +22,7 @@ export default class Switch implements ISwitch {
   }
 
   receive(packet: IPacket) {
-    console.log({ method: "RECEIVE [SWITCH]", packet });
+    console.log({ method: "RECEIVE [SWITCH]" });
     this.processing(packet);
 
     if (
@@ -31,13 +31,25 @@ export default class Switch implements ISwitch {
       packet?.destinationMac === Constants.withoutDestinationMac
     ) {
       this.broadcast(packet);
+    } else {
+      console.log({ status: "DOESN`T DO BROADCAST" });
+      this.send(packet);
     }
   }
 
-  send!: (packet: IPacket) => void;
+  send(packet: IPacket) {
+    const findCorrectPort = this.forwardingTable.data.find(
+      (el) => el.mac === packet.destinationMac
+    );
+    console.log({ method: "SEND [SWITCH]" });
+
+    if (findCorrectPort && findCorrectPort?.port) {
+      this.ports[findCorrectPort?.port - 1].send(packet);
+    }
+  }
 
   addLink(connection: IPort, port: number) {
-    console.log({ method: "ADD LINK", connection });
+    // console.log({ method: "ADD LINK", connection });
     this.ports[port - 1].add(this.ports[port - 1], connection);
   }
 
@@ -52,7 +64,7 @@ export default class Switch implements ISwitch {
       const portWithPacket = port.queueReceive.find((el) => el === packet);
       if (portWithPacket) {
         this.forwardingTable.load({
-          mac: portWithPacket.originIp,
+          mac: portWithPacket.originMac,
           port: port.num,
           isSwitch: true,
         });

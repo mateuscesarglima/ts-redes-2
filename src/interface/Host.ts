@@ -8,11 +8,7 @@ export default interface IHost {
   arpTable: ITable;
   port: IPort;
 
-  send: (
-    payload: string,
-    destinationIp: string,
-    destinationMac?: string
-  ) => void;
+  send: (packet: IPacket) => void;
   receive: (packet: IPacket) => void;
 
   addLink: (connection: IPort) => void;

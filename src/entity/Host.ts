@@ -21,12 +21,20 @@ export default class Host implements IHost {
     this.port = new Port(1, this);
   }
 
-  send(payload: string, destinationIp: string, destinationMac?: string) {
-    print(`SEND MESSAGE [HOST: ${this.ip}] TO [HOST: ${destinationIp}]`);
+  send(packet: IPacket) {
+    print(`SEND MESSAGE [HOST: ${this.ip}] TO [HOST: ${packet.destinationIp}]`);
 
-    if (!destinationMac) {
-      this.arpRequest(destinationIp, payload);
+    if (!packet.destinationMac) {
+      return this.arpRequest(packet.destinationIp, packet.payload);
     }
+
+    const _packet = new Packet(packet);
+
+    if (packet?.header === PacketHeaderEnum.ArpReply) {
+      console.log({ method: "HOST ARP REPLY" });
+    }
+    console.log({ method: "HOST SEND WITH DESTINATION MAC" });
+    return this.port.send(_packet);
   }
 
   receive(packet: IPacket) {
@@ -40,12 +48,29 @@ export default class Host implements IHost {
       this.arpTable.load({ ip: packet.originIp, mac: packet.originMac });
 
     if (packet.destinationIp === this.ip) {
+      if (!packet.header) return console.log({ status: "MESSAGE RECEIVED" });
       console.log(
         Colors.FgMagenta,
         { status: "IS MESSAGE TO ME" },
         Colors.Reset
       );
-    } else {
+      const _packet: IPacket = {
+        originIp: this.ip,
+        originMac: this.mac,
+        destinationIp: packet.originIp,
+        destinationMac: packet.originMac,
+        payload: packet.payload,
+      };
+      if (packet?.header === PacketHeaderEnum.ArpRequest) {
+        const arpReplyPacket: IPacket = {
+          ..._packet,
+          header: PacketHeaderEnum.ArpReply,
+        };
+
+        this.send(new Packet(arpReplyPacket));
+      } else {
+        this.send(new Packet(_packet));
+      }
     }
   }
 
